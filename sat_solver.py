@@ -132,3 +132,103 @@ def branching_sat_solve(sat, p):    # partial_assigment (i.e., [1, -3])
         return temp + t_p
         
     return 'unsat'
+    
+# Unit Propagation
+def unit_propagate(clause_set):
+    while True:
+        l = [len(c) for c in clause_set]
+        try:
+            index = l.index(1)          # identify an unit clause, the length of unit clause is 1
+            x = clause_set[index][0]    # read the value of that unit clause
+            # if x > 0:
+            #     p = x                   # to make the clause True, x need to be True
+            # else:
+            #     p = x
+            p = [x]
+            simplification(clause_set, p)
+        except:                         # no unit clauses anymore
+            break
+    
+    return clause_set
+    
+# Pure Literal Elimination
+def pure_literal_eliminate(clause_set):
+    while True:
+        flat = sum(clause_set, [])          # flatten F
+        flat = list(dict.fromkeys(flat))
+        p = []                              # pure literals (also satisfying partial assignments)
+        
+        for i in range(len(flat)):
+            if -flat[i] not in flat and flat[i] not in p:   # check if there is ¬x
+                p.append(flat[i])
+                
+        if p != []:                         # if there are any literals
+            simplification(clause_set, p)
+        else:
+            return clause_set               # return the most simplified F
+            
+# The DPLL Algorithm
+def dpll_sat_solve(clause_set, p):
+    # simiplify the set of clauses
+    simplification(clause_set, p)
+
+    # unit propagation
+    u_p = []                            # partial assignments got from unit propagation
+    while True:
+        l = [len(c) for c in clause_set]
+        try:
+            index = l.index(1)          # identify an unit clause, the length of unit clause is 1
+            x = clause_set[index][0]    # read the value of that unit clause
+            # if x > 0:
+            #     p = x                 # to make the clause True, x need to be True
+            # else:
+            #     p = x
+            t_p = [x]                   # temp p
+            u_p.append(x)
+            simplification(clause_set, t_p)
+        except:                         # no unit clauses anymore
+            break
+
+    # pure literal elimination
+    p_p = []                            # partial assignments got from unit propagation
+    while True:
+        flat = sum(clause_set, [])          # flatten F
+        flat = list(dict.fromkeys(flat))
+        t_p = []                              # pure literals (also satisfying partial assignments)
+        
+        for i in range(len(flat)):
+            if -flat[i] not in flat and flat[i] not in p:   # check if there is ¬x
+                t_p.append(flat[i])
+                
+        if t_p != []:                         # if there are any literals
+            p_p.extend(t_p)
+            simplification(clause_set, t_p)
+        else:
+            break                           # return the most simplified F
+            
+    
+    # branching sat solver
+    
+    # if sat contains empty clause or sat is [[]]
+    if [] in clause_set:
+        return 'unsat'
+    
+    # if F has no clauses, return [] which means what the values of the rest of variables do not matter
+    if clause_set == []:
+        return p + u_p + p_p
+        
+    # choose the last variable x in sat that is *
+    # find out the number of variables
+    flat = sum(clause_set, []) # flat the array
+    x = max([abs(e) for e in flat])
+    
+    # assign True to the variable x
+    temp = dpll_sat_solve(copy.deepcopy(clause_set), [x])
+    if temp != 'unsat':
+        return temp + p + u_p + p_p
+    # assign False to the variable x
+    temp = dpll_sat_solve(copy.deepcopy(clause_set), [-x])
+    if temp != 'unsat':
+        return temp + p + u_p + p_p
+        
+    return 'unsat'
